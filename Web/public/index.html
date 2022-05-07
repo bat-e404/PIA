@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Zona Meteorológica</title>
+
+    <!-- incluye el SDK de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-database.js"></script>
+
+    <script>
+      // Reemplace con el objeto de configuración de su aplicación
+      const firebaseConfig = {
+        apiKey: "AIzaSyAISVjkPr15fnP6RfHTet3Khmc_QDHCATs",
+        authDomain: "esp8266-firebase-demo-c58df.firebaseapp.com",
+        databaseURL: "https://esp8266-firebase-demo-c58df-default-rtdb.firebaseio.com",
+        projectId: "esp8266-firebase-demo-c58df",
+        storageBucket: "esp8266-firebase-demo-c58df.appspot.com",
+        messagingSenderId: "562324745749",
+        appId: "1:562324745749:web:7543aad64572c82d3f681c"
+      };
+
+
+      // Inicializar base de fuego
+      firebase.initializeApp(firebaseConfig);
+
+      // Hacer referencias de autenticación y base de datos
+      const auth = firebase.auth();
+      const db = firebase.database();
+
+    </script>
+
+    <!-- incluir highchartsjs para construir los gráficos-->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <!-- incluir para usar jquery-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!--incluir iconos de fontawesome-->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+    <!-- incluye la biblioteca Javascript de calibres-->
+    <script src="https://cdn.rawgit.com/Mikhus/canvas-gauges/gh-pages/download/2.1.7/all/gauge.min.js"></script>
+    <!--hace referencia a una hoja de estilo-->
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+  </head>
+
+  <body>
+
+    <!--BARRA SUPERIOR-->
+    <div class="topnav">
+      <h1>Zona Meteorológica <i class="fas fa-clipboard-list"></i></h1>
+    </div>
+
+    <!--BARRA DE AUTENTICACIÓN (DETALLES DE USUARIO/BOTÓN CERRAR SESIÓN)-->
+    <div id="authentication-bar" style="display: none;">
+      <p><span id="authentication-status">User logged in</span>
+        <span id="user-details">USEREMAIL</span>
+        <a href="/" id="logout-link">(logout)</a>
+      </p>
+    </div>
+
+    <!--FORMULARIO DE INICIO DE SESIÓN-->
+    <form id="login-form" style="display: none;">
+      <div class="form-elements-container">
+        <label for="input-email"><b>Email</b></label>
+        <input type="text" placeholder="Enter Username" id="input-email" required>
+
+        <label for="input-password"><b>Password</b></label>
+        <input type="password" placeholder="Enter Password" id="input-password" required>
+
+        <button type="submit" id="login-button">Login</button>
+        <p id="error-message" style="color:red;"></p>
+      </div>
+    </form>
+
+    <!--CONTENIDO (LECTURAS DEL SENSOR)-->
+    <div class="content-sign-in" id="content-sign-in" style="display: none;">
+
+      <!--ÚLTIMA ACTUALIZACIÓN-->
+      <p><span class ="date-time">Last update: <span id="lastUpdate"></span></span></p>
+      <p>
+        Cards: <input type="checkbox" id="cards-checkbox" name="cards-checkbox" checked>
+        Gauges: <input type="checkbox" id="gauges-checkbox" name="gauges-checkbox" checked>
+        Charts: <input type="checkbox" id="charts-checkbox" name="charts-checkbox" unchecked>
+      </p>
+      <div id="cards-div">
+        <div class="cards">
+          <!--TEMPERATURA-->
+          <div class="card">
+            <p><i class="fas fa-thermometer-half" style="color:#059e8a;"></i> TEMPERATURE</p>
+            <p><span class="reading"><span id="temp"></span> &deg;C</span></p>
+          </div>
+          <!--HUMEDAD-->
+          <div class="card">
+            <p><i class="fas fa-tint" style="color:#00add6;"></i> HUMIDITY</p>
+            <p><span class="reading"><span id="hum"></span> &percnt;</span></p>
+          </div>
+          <!--PRESIÓN-->
+          <div class="card">
+            <p><i class="fas fa-angle-double-down" style="color:#e1e437;"></i> PRESSURE</p>
+            <p><span class="reading"><span id="pres"></span> hPa</span></p>
+          </div>
+        </div>
+      </div>
+      <!--MEDIDORES-->
+      <div id ="gauges-div">
+        <div class="cards">
+          <!--TEMPERATURA-->
+          <div class="card">
+            <canvas id="gauge-temperature"></canvas>
+          </div>
+          <!--HUMEDAD-->
+          <div class="card">
+            <canvas id="gauge-humidity"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!--GRÁFICOS-->
+      <div id="charts-div" style="display:none">
+        <!--ESTABLECER NÚMERO DE LECTURAS CAMPO DE ENTRADA-->
+        <div>
+          <p> Number of readings: <input type="number" id="charts-range"></p>
+        </div>
+        <!--TABLA DE TEMPERATURA-->
+        <div class="cards">
+          <div class="card">
+            <p><i class="fas fa-thermometer-half" style="color:#059e8a;"></i> TEMPERATURE CHART</p>
+            <div id="chart-temperature" class="chart-container"></div>
+          </div>
+        </div>
+        <!--TABLA DE HUMEDAD-->
+        <div class="cards">
+          <div class="card">
+            <p><i class="fas fa-tint" style="color:#00add6;"></i> HUMIDITY CHART</p>
+            <div id="chart-humidity" class="chart-container"></div>
+          </div>
+        </div>
+        <!--TABLA DE PRESIONES-->
+        <div class="cards">
+          <div class="card">
+            <p><i class="fas fa-angle-double-down" style="color:#e1e437;"></i> PRESSURE CHART</p>
+            <div id="chart-pressure" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+
+    <!--BOTONES PARA MANEJO DE DATOS-->
+    <p>
+      <!--botón ver datos-->
+      <button id="view-data-button">View all data</button>
+      <!--Ocultar botón de datos-->
+      <button id="hide-data-button" style= "display:none;">Hide data</button>
+      <!--boton eliminar datos-->
+      <button id="delete-button" class="deletebtn">Delete data</button>
+    </p>
+    <!--Modal para borrar datos-->
+    <div id="delete-modal" class="modal" sytle="display:none">
+      <span onclick = "document.getElementById('delete-modal').style.display='none'" class="close" title="Close Modal">×</span>
+      <form id= "delete-data-form" class="modal-content" action="/">
+        <div class="container">
+          <h1>Delete Data</h1>
+          <p>Are you sure you want to delete all data from database?</p>
+          <div class="clearfix">
+            <button type="button" onclick="document.getElementById('delete-modal').style.display='none'" class="cancelbtn">Cancel</button>
+            <button type="submit" onclick="document.getElementById('delete-modal').style.display='none'" class="deletebtn">Delete</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!--TABLA CON TODOS LOS DATOS-->
+    <div class ="cards">
+      <div class="card" id="table-container" style= "display:none;">
+        <table id="readings-table">
+            <tr id="theader">
+              <th>Timestamp</th>
+              <th>Temp (ºC)</th>
+              <th>Hum (%)</th>
+              <th>Pres (hPa)</th>
+            </tr>
+            <tbody id="tbody">
+            </tbody>
+        </table>
+        <p><button id="load-data" style= "display:none;">More results...</button></p>
+      </div>
+    </div>
+
+  </div>
+
+    <!--INCLUYE ARCHIVOS JS-->
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/charts-definition.js"></script>
+    <script src="scripts/gauges-definition.js"></script>
+    <script src="scripts/index.js"></script>
+
+  </body>
+
+</html>
